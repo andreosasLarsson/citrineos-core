@@ -4,13 +4,12 @@
 
 import type { AuthorizationDto, LocationDto, TariffDto, TransactionDto } from '@citrineos/types';
 import type { TokenDTO } from '../model/DTO/TokenDTO.js';
-import type { ILogObj } from 'tslog';
-import { Logger } from 'tslog';
+import type { ILogObj, Logger } from 'tslog';
 import type { Price } from '../model/Price.js';
 import type { Session } from '../model/Session.js';
 import type { Tariff as OcpiTariff } from '../model/Tariff.js';
 import type { LocationDTO } from '../model/DTO/LocationDTO.js';
-import { LocationsService } from '../services/LocationsService.js';
+import type { LocationsService } from '../services/LocationsService.js';
 import type {
   GetAuthorizationByIdQueryResult,
   GetAuthorizationByIdQueryVariables,
@@ -18,23 +17,44 @@ import type {
   GetLocationByIdQueryVariables,
   GetTariffByKeyQueryResult,
   GetTariffByKeyQueryVariables,
+  IOcpiGraphqlClient,
 } from '../graphql/index.js';
 import {
   GET_AUTHORIZATION_BY_ID,
   GET_LOCATION_BY_ID_QUERY,
   GET_TARIFF_BY_KEY_QUERY,
-  OcpiGraphqlClient,
 } from '../graphql/index.js';
-import { LocationMapper } from './LocationMapper.js';
-import { TokensMapper } from './TokensMapper.js';
+import type { OcpiGraphqlDependencies } from '../dependencies.js';
+import type { LocationMapper } from './LocationMapper.js';
+import type { TokensMapper } from './TokensMapper.js';
 import { TariffMapper } from './TariffMapper.js';
 
+export interface OcpiTransactionMapperDependencies extends OcpiGraphqlDependencies {
+  locationsService: LocationsService;
+  locationMapper: LocationMapper;
+  tokensMapper: TokensMapper;
+}
+
 export abstract class BaseTransactionMapper {
-  protected constructor(
-    protected logger: Logger<ILogObj>,
-    protected locationsService: LocationsService,
-    protected ocpiGraphqlClient: OcpiGraphqlClient,
-  ) {}
+  protected readonly logger: Logger<ILogObj>;
+  protected readonly locationsService: LocationsService;
+  protected readonly ocpiGraphqlClient: IOcpiGraphqlClient;
+  protected readonly locationMapper: LocationMapper;
+  protected readonly tokensMapper: TokensMapper;
+
+  protected constructor({
+    logger,
+    locationsService,
+    ocpiGraphqlClient,
+    locationMapper,
+    tokensMapper,
+  }: OcpiTransactionMapperDependencies) {
+    this.logger = logger;
+    this.locationsService = locationsService;
+    this.ocpiGraphqlClient = ocpiGraphqlClient;
+    this.locationMapper = locationMapper;
+    this.tokensMapper = tokensMapper;
+  }
 
   public async getLocationDTOsForTransactions(
     transactions: TransactionDto[],
@@ -56,7 +76,7 @@ export abstract class BaseTransactionMapper {
         continue;
       }
 
-      const locationDto = LocationMapper.fromGraphql(location);
+      const locationDto = this.locationMapper.fromGraphql(location);
 
       transactionIdToLocationMap.set(transaction.transactionId!, locationDto);
     }
@@ -79,7 +99,7 @@ export abstract class BaseTransactionMapper {
         }
       }
       if (transaction.authorization) {
-        const tokenDto = await TokensMapper.toDto(transaction.authorization);
+        const tokenDto = await this.tokensMapper.toDto(transaction.authorization);
         if (tokenDto) {
           transactionIdToTokenMap.set(transaction.transactionId!, tokenDto);
         } else {

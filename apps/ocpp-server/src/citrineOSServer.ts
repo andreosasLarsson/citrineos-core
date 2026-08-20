@@ -20,6 +20,7 @@ import { type SystemConfig, EventGroup, eventGroupFromString } from '@citrineos/
 import {
   apiAuthPluginFp,
   BrokerAwareMessageSender,
+  buildContainer,
   DefaultDrizzleInstance,
   type HealthCheckResult,
   HealthCheckService,
@@ -44,7 +45,6 @@ import type {
 } from 'fastify/types/schema.js';
 import type { RedisClientOptions } from 'redis';
 import { type ILogObj, Logger } from 'tslog';
-import { buildContainer } from './container.js';
 
 /** The container tokens needed to initialize a module and its APIs in a scope. */
 interface ModuleInitSpec {
