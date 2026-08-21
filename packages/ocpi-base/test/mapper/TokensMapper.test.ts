@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 import { AuthorizationStatusEnum } from '@citrineos/types';
+import { Logger } from 'tslog';
 import { describe, expect, it } from 'vitest';
 import type { TokenDTO } from '../../src/model/DTO/TokenDTO.js';
 import { TokenType } from '../../src/model/TokenType.js';
@@ -26,25 +27,27 @@ function aToken(overrides: Partial<TokenDTO> = {}): Partial<TokenDTO> {
   };
 }
 
+const tokensMapper = new TokensMapper({ logger: new Logger({ minLevel: 6 }) });
+
 describe('TokensMapper.mapOcpiTokenToPartialOcppAuthorization', () => {
   it('leaves status undefined when `valid` is absent from a partial PATCH body', () => {
     // The ticket: a PATCH with only `language` must not touch the token's status.
-    const result = TokensMapper.mapOcpiTokenToPartialOcppAuthorization({ language: 'en' });
+    const result = tokensMapper.mapOcpiTokenToPartialOcppAuthorization({ language: 'en' });
     expect(result.status).toBeUndefined();
   });
 
   it('maps valid:true to Accepted', () => {
-    const result = TokensMapper.mapOcpiTokenToPartialOcppAuthorization(aToken({ valid: true }));
+    const result = tokensMapper.mapOcpiTokenToPartialOcppAuthorization(aToken({ valid: true }));
     expect(result.status).toBe(AuthorizationStatusEnum.Accepted);
   });
 
   it('maps valid:false to Invalid (a deliberate block still works)', () => {
-    const result = TokensMapper.mapOcpiTokenToPartialOcppAuthorization(aToken({ valid: false }));
+    const result = tokensMapper.mapOcpiTokenToPartialOcppAuthorization(aToken({ valid: false }));
     expect(result.status).toBe(AuthorizationStatusEnum.Invalid);
   });
 
   it('leaves realTimeAuth undefined when `whitelist` is absent (parallel already-correct field)', () => {
-    const result = TokensMapper.mapOcpiTokenToPartialOcppAuthorization({ language: 'en' });
+    const result = tokensMapper.mapOcpiTokenToPartialOcppAuthorization({ language: 'en' });
     expect(result.realTimeAuth).toBeUndefined();
   });
 });
